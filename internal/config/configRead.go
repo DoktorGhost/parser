@@ -11,9 +11,12 @@ type Config struct {
 		City   string `json:"city"`
 		Street string `json:"street"`
 	} `json:"deliveryAddress"`
-	Categories []string `json:"categories"`
-	Proxy      string   `json:"proxy"`
-	Headless   bool     `json:"headless"`
+	Categories   []string `json:"categories"`
+	Proxy        string   `json:"proxy"`
+	Headless     bool     `json:"headless"`
+	Port         int      `json:"port"`
+	ChromeDriver string   `json:"chromedriver"`
+	Export       string   `json:"export"`
 }
 
 func ReadConfig(filename string) (*Config, error) {

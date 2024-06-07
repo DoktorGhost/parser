@@ -21,12 +21,9 @@ func NewDriver(proxy string, headless bool) (selenium.WebDriver, error) {
 	caps := selenium.Capabilities{}
 	chromeCaps := chrome.Capabilities{
 		Args: []string{
-			"--disable-gpu",
 			"--blink-settings=imagesEnabled=false",
-			"--disable-javascript",
-			"--adblocker",
-			"--hide-scrollbars",
 			"--ignore-certificate-errors",
+			"--allow-running-insecure-content",
 			"--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
 		},
 	}
@@ -73,6 +70,6 @@ func WhiteElement(driver selenium.WebDriver, selector string, xpath string) erro
 			return lastProduct.IsDisplayed()
 		}
 		return false, nil
-	}, 10*time.Second)
+	}, 20*time.Second)
 	return err
 }

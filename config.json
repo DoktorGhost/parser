@@ -9,6 +9,9 @@
     "Электроника",
     "Фрукты и ягоды"
   ],
-  "proxy": "",
-  "headless": true
+  "proxy": "http://91d970117363afa8920634af1bd770a447ec9753:premium_proxy=true@proxy.zenrows.com:8001",
+  "headless": false,
+  "port": 4444,
+  "chromedriver": "../../chromedriver/chromedriver",
+  "export": "../../EXPORT.csv"
 }

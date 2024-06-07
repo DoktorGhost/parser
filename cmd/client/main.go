@@ -27,9 +27,12 @@ func main() {
 	categorysName := configElements.Categories
 	proxy := configElements.Proxy
 	headless := configElements.Headless
+	port := configElements.Port
+	chromeDriver := configElements.ChromeDriver
+	exportPath := configElements.Export
 
 	// Инициализация сервиса драйвера Chrome на порту 4444
-	service, err := pars.Service("./chromedriver", 4444)
+	service, err := pars.Service(chromeDriver, port)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -103,10 +106,7 @@ func main() {
 		}
 	}
 
-	//////////////////////////////////////////////////////////////////////
-
 	//ВВОД АДРЕСА
-
 	//клик по кнопке
 	element, err := driver.FindElement(selenium.ByXPATH, "//span[text()='Нет, другой']")
 	if err != nil {
@@ -357,14 +357,13 @@ func main() {
 		}
 	}
 
-	//экземпляр БД
+	//экземпляр БД (экспорт в csv)
 	stor := csvRecord.NewCsvRecord()
 	parser := usecase.NewUseCaseParser(stor)
 
-	//запись в бд
-
+	//запись в бд (экспорт в csv)
 	for _, card := range cardArr {
-		parser.Add("../../EXPORT.csv", card)
+		parser.Add(exportPath, card)
 	}
 
 	//подсчет времени выполнения
