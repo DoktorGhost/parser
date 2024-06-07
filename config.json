@@ -1,0 +1,14 @@
+{
+  "urlSeller": "https://samokat.ru/",
+  "deliveryAddress": {
+    "city": "Ростов-на-Дону",
+    "street": "Орбитальная, 74"
+  },
+  "categories": [
+    "Уход и макияж",
+    "Электроника",
+    "Фрукты и ягоды"
+  ],
+  "proxy": "",
+  "headless": true
+}

@@ -3,8 +3,9 @@ package main
 import (
 	"fmt"
 	"github.com/tebeka/selenium"
-	"github.com/tebeka/selenium/chrome"
 	"log"
+	"parser/internal/config"
+	"parser/internal/pars"
 	"parser/internal/storage"
 	"parser/internal/storage/csvRecord"
 	"parser/internal/usecase"
@@ -13,34 +14,32 @@ import (
 )
 
 func main() {
+	start := time.Now()
 
-	urlSeller := "https://samokat.ru/" //парсер настроен толькло на этот сайт
-	//указываем адрес для доставки
-	city := "Ростов-на-Дону"
-	street := "Орбитальная, 74"
-	categorysName := []string{"Уход и макияж", "Электроника"}
-	//proxy := "--proxy-server=http://188.235.0.207:8181" //прокси сервер
+	configElements, err := config.ReadConfig("../../config.json")
+	if err != nil {
+		log.Fatal("Error reading config:", err)
+	}
+
+	urlSeller := configElements.UrlSeller
+	city := configElements.DeliveryAddress.City
+	street := configElements.DeliveryAddress.Street
+	categorysName := configElements.Categories
+	proxy := configElements.Proxy
+	headless := configElements.Headless
 
 	// Инициализация сервиса драйвера Chrome на порту 4444
-	service, err := selenium.NewChromeDriverService("./chromedriver", 4444)
+	service, err := pars.Service("./chromedriver", 4444)
 	if err != nil {
-		log.Fatal("Ошибка инициализации selenium:", err)
+		log.Fatal(err)
 	}
 	defer service.Stop()
 
-	caps := selenium.Capabilities{}
-	caps.AddChrome(chrome.Capabilities{
-		Args: []string{
-			//proxy,  //работа через прокси
-			//"--headless", // безоконный режим
-		},
-	})
-
-	// Создание нового удаленного клиента с указанными опциями
-	driver, err := selenium.NewRemote(caps, "")
+	driver, err := pars.NewDriver(proxy, headless)
 	if err != nil {
-		log.Fatal("Ошибка создания клиента:", err)
+		log.Fatal(err)
 	}
+	defer driver.Quit()
 
 	//открываем окно максимально
 	err = driver.MaximizeWindow("")
@@ -54,10 +53,14 @@ func main() {
 		log.Fatal("Ошибка открытия целевого сайта:", err)
 	}
 
-	//////////////////////////////////////////////////////////
-
 	// Создать карту для хранения названий категорий и их ссылок
 	categoryMap := make(map[string]string)
+
+	//Ожидание загрузки страницы
+	err = pars.WhiteElement(driver, ".CatalogTree_root__IHeCU", "selector")
+	if err != nil {
+		log.Fatal("Error:", err)
+	}
 
 	//все категории
 	category, err := driver.FindElement(selenium.ByCSSSelector, ".CatalogTree_root__IHeCU")
@@ -99,28 +102,28 @@ func main() {
 			categoryMap[textContent] = href
 		}
 	}
-	//fmt.Println(categoryMap)
+
 	//////////////////////////////////////////////////////////////////////
 
 	//ВВОД АДРЕСА
 
 	//клик по кнопке
-	button, err := driver.FindElement(selenium.ByXPATH, "//span[text()='Нет, другой']")
+	element, err := driver.FindElement(selenium.ByXPATH, "//span[text()='Нет, другой']")
 	if err != nil {
 		log.Fatalf("Error finding the button: %v", err)
 	}
-	err = button.Click()
+	err = element.Click()
 	if err != nil {
 		log.Fatalf("Error clicking the button: %v", err)
 	}
 
 	// Ввести текст в поле "Город"
-	streetInput, err := driver.FindElement(selenium.ByCSSSelector, "input[placeholder='Город']")
+	cityInput, err := driver.FindElement(selenium.ByCSSSelector, "input[placeholder='Город']")
 	if err != nil {
 		log.Fatalf("Error finding the input field: %v", err)
 	}
 
-	err = streetInput.SendKeys(city)
+	err = cityInput.SendKeys(city)
 	if err != nil {
 		log.Fatalf("Error entering text: %v", err)
 	}
@@ -153,7 +156,7 @@ func main() {
 	}
 
 	//ввод улицы
-	streetInput, err = driver.FindElement(selenium.ByCSSSelector, "input[placeholder='Улица и дом']")
+	streetInput, err := driver.FindElement(selenium.ByCSSSelector, "input[placeholder='Улица и дом']")
 	if err != nil {
 		log.Fatalf("Error finding the input field: %v", err)
 	}
@@ -164,14 +167,8 @@ func main() {
 		log.Fatalf("Error entering text: %v", err)
 	}
 
-	//Ожидание загрузки страницы и появления кнопок
-	err = driver.WaitWithTimeout(func(driver selenium.WebDriver) (bool, error) {
-		lastProduct, _ := driver.FindElement(selenium.ByCSSSelector, ".Suggest_suggestItems__wnlQV")
-		if lastProduct != nil {
-			return lastProduct.IsDisplayed()
-		}
-		return false, nil
-	}, 10*time.Second)
+	//Ожидание загрузки страницы
+	err = pars.WhiteElement(driver, ".Suggest_suggestItems__wnlQV", "selector")
 	if err != nil {
 		log.Fatal("Error:", err)
 	}
@@ -205,19 +202,12 @@ func main() {
 	}
 
 	//Ожидание загрузки страницы и появления кнопок
-	err = driver.WaitWithTimeout(func(driver selenium.WebDriver) (bool, error) {
-		lastProduct, _ := driver.FindElement(selenium.ByCSSSelector, "._button--size_m_10nio_88._button--theme_primary_10nio_56.AddressCreation_button__ow_WB")
-
-		if lastProduct != nil {
-			return lastProduct.IsDisplayed()
-		}
-		return false, nil
-	}, 10*time.Second)
+	err = pars.WhiteElement(driver, "._button--size_m_10nio_88._button--theme_primary_10nio_56.AddressCreation_button__ow_WB", "selector")
 	if err != nil {
 		log.Fatal("Error:", err)
 	}
 
-	button, err = driver.FindElement(selenium.ByCSSSelector, "._button--size_m_10nio_88._button--theme_primary_10nio_56.AddressCreation_button__ow_WB button._control_10nio_4")
+	button, err := driver.FindElement(selenium.ByCSSSelector, "._button--size_m_10nio_88._button--theme_primary_10nio_56.AddressCreation_button__ow_WB button._control_10nio_4")
 	if err != nil {
 		log.Fatalf("Error finding the button: %v", err)
 	}
@@ -226,14 +216,7 @@ func main() {
 		log.Fatalf("Error clicking the button: %v", err)
 	}
 
-	err = driver.WaitWithTimeout(func(driver selenium.WebDriver) (bool, error) {
-		lastProduct, _ := driver.FindElement(selenium.ByCSSSelector, "._icon_1c7va_1")
-
-		if lastProduct != nil {
-			return lastProduct.IsDisplayed()
-		}
-		return false, nil
-	}, 10*time.Second)
+	err = pars.WhiteElement(driver, "._icon_1c7va_1", "selector")
 	if err != nil {
 		log.Fatal("Error:", err)
 	}
@@ -252,14 +235,7 @@ func main() {
 		}
 
 		//ждем загрузки сайта
-		err = driver.WaitWithTimeout(func(driver selenium.WebDriver) (bool, error) {
-			lastProduct, _ := driver.FindElement(selenium.ByCSSSelector, ".InlineSearch_content__9_P60")
-
-			if lastProduct != nil {
-				return lastProduct.IsDisplayed()
-			}
-			return false, nil
-		}, 10*time.Second)
+		err = pars.WhiteElement(driver, ".InlineSearch_content__9_P60", "selector")
 		if err != nil {
 			log.Fatal("Error:", err)
 		}
@@ -378,26 +354,22 @@ func main() {
 				card.Address = fmt.Sprintf("%s, %s", city, street)
 				cardArr = append(cardArr, card)
 			}
-
-			//cardArr = append(cardArr, card)
-
 		}
-
-		//cardArr = append(cardArr, card)
-
 	}
-
-	//fmt.Println(cardArr)
 
 	//экземпляр БД
 	stor := csvRecord.NewCsvRecord()
 	parser := usecase.NewUseCaseParser(stor)
 
 	//запись в бд
+
 	for _, card := range cardArr {
-		parser.Add("card.csv", card)
+		parser.Add("../../EXPORT.csv", card)
 	}
 
-	//time.Sleep(10 * time.Minute)
+	//подсчет времени выполнения
+	end := time.Now()
+	duration := end.Sub(start)
+	fmt.Println("Время выполнения:", duration)
 
 }
