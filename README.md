@@ -1,3 +1,7 @@
+<p align="left">
+      <img src="https://i.ibb.co/cYzQsPG/logoza-ru.png" alt="Project Logo" width="726">
+</p>
+
 # Мой первый парсер
 
 *Программа парсит онлайн-магазин Самокат* 
